@@ -23,6 +23,10 @@
         <springdoc.version>2.5.0</springdoc.version>
     </properties>
 
+    <!-- Spring Cloud BOM (already added by the teacher).
+         Spring Cloud 2023.0.x is the release train that matches Spring Boot 3.2.x.
+         Do NOT put 2025.0.0 here unless you also move Spring Boot to 3.5.x:
+         the application would refuse to start ("Spring Boot is not compatible with this Spring Cloud release train"). -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -68,6 +72,12 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- Eureka Client: registers this service in the Eureka server -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
         <!-- Tests -->

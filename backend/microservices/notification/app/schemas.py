@@ -6,6 +6,19 @@ class HelloResponse(BaseModel):
     message: str = Field(..., examples=["hello I'm microservice notification"])
 
 
+class HealthResponse(BaseModel):
+    """Bonus Eureka: answer of GET /health."""
+    status: str = Field(..., examples=["UP"])
+
+
+class CandidateFromEureka(BaseModel):
+    """Bonus Eureka: a candidate read from the candidat microservice, found through Eureka."""
+    servedBy: str = Field(..., examples=["http://192.168.1.10:8081"])
+    candidate: dict = Field(
+        ..., examples=[{"id": 1, "firstname": "Badia", "lastname": "Abouhdid", "email": "badia@example.com"}]
+    )
+
+
 # TODO (students): add the Notification schemas, for example:
 #
 # from datetime import datetime

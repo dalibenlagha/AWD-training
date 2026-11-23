@@ -1,3 +1,94 @@
+# Our work: Eureka workshop (Chapter 4)
+
+**Team**
+
+| Name | Work |
+| --- | --- |
+| _First name LAST NAME_ | Eureka server, Candidat, Job |
+| _First name LAST NAME_ | Meeting (Node.js) |
+| _First name LAST NAME_ | Notification (Python) |
+
+**Eureka dashboard** (http://localhost:8761): CANDIDAT, JOB, MEETING and NOTIFICATION at the same time,
+with 2 instances of MEETING and 2 of NOTIFICATION.
+
+![Eureka dashboard](documentation/screenshots/eureka-dashboard.png)
+
+> TODO: when everything runs (step 6 below), take the screenshot, save it as
+> `documentation/screenshots/eureka-dashboard.png`, then delete this line.
+
+### What we did
+
+| Part | What | Main files |
+| --- | --- | --- |
+| 1 | Eureka server, port 8761 | `backend/eureka/` (new project): `@EnableEurekaServer`, `application.properties` |
+| 2 | Candidat and Job registered as `CANDIDAT` and `JOB` | `pom.xml` (eureka-client), `@EnableDiscoveryClient`, `application.properties` |
+| 3 | Meeting (Node.js) registered as `MEETING` | `src/config/eureka.js`, `src/server.js` (start + de-register on Ctrl+C) |
+| 3 | Notification (Python) registered as `NOTIFICATION` | `app/eureka.py`, `app/main.py` (FastAPI lifespan) |
+| Bonus | `GET /health`, declared as `healthCheckUrl` / `statusPageUrl` | meeting `src/app.js`, notification `app/main.py` |
+| Bonus | Find CANDIDAT through Eureka (no hard-coded URL), then call `GET /api/candidates/{id}` | meeting `src/services/candidat.client.js`, notification `app/routers/notification.py` |
+
+### How to run everything (Windows, in this order)
+
+One terminal (or one IntelliJ Run tab) per instance. A service can take **up to 30 s** to appear in the dashboard: refresh the page.
+
+**1. Eureka server**: in IntelliJ, run `EurekaApplication` (`backend/eureka`).
+If IntelliJ doesn't see the project, right-click `backend/eureka/pom.xml` → *Add as Maven Project*.
+Open http://localhost:8761: "No instances available".
+
+**2. Candidat, 2 instances**: run `CandidatApplication` (port 8081).
+For the 2nd instance: *Run → Edit Configurations*, copy `CandidatApplication`, *Modify options → Add VM options*: `-Dserver.port=8091`, then run it.
+Command line instead: `mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8091"`
+
+**3. Job**: start MySQL and create `job_db` (see `backend/microservices/job/README.md`), then run `JobApplication` (port 8082).
+
+**4. Meeting, 2 instances** (Node.js 18+)
+```powershell
+cd backend/microservices/meeting
+npm install
+npm start                      # instance 1: port 8083
+```
+In a 2nd terminal, same folder:
+```powershell
+$env:PORT=8093; npm start      # instance 2: port 8093
+```
+
+**5. Notification, 2 instances** (Python 3.10+)
+```powershell
+cd backend/microservices/notification
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m app.main             # instance 1: port 8084
+```
+In a 2nd terminal, same folder:
+```powershell
+.\venv\Scripts\Activate.ps1
+$env:PORT=8094; python -m app.main     # instance 2: port 8094
+```
+
+**6. Check**: http://localhost:8761 must show `CANDIDAT (2)`, `JOB (1)`, `MEETING (2)` and `NOTIFICATION (2)`. Take the screenshot.
+- http://localhost:8083/api/meetings/hello and http://localhost:8084/api/notifications/hello still answer.
+- Bonus: create a candidate in Swagger (http://localhost:8081/swagger-ui.html), then open
+  http://localhost:8083/api/meetings/candidates/1 or http://localhost:8084/api/notifications/candidates/1.
+  `servedBy` shows which Candidat instance answered. Each Candidat instance has its **own** H2 database,
+  so you get a 404 when the instance without this candidate is chosen: create it on 8091 too.
+
+Tests (no Eureka needed): `npm test` in `meeting`, `pip install -r requirements-dev.txt` then `pytest` in `notification`.
+
+### If something goes wrong
+
+| What you see | Why | What to do |
+| --- | --- | --- |
+| `ECONNREFUSED 127.0.0.1:8761` (Meeting) or `Register error! Will try in next heartbeat` (Notification) | Eureka is not started | Start Eureka. Meeting tries again every 10 s, Notification every 30 s. |
+| Red text in the dashboard: `EMERGENCY! EUREKA MAY BE INCORRECTLY CLAIMING INSTANCES ARE UP...` | Self-preservation mode: few heartbeats arrive, so Eureka stops removing instances | Normal with few services on one PC (see the course). For the workshop only, you can add `eureka.server.enable-self-preservation=false` to Eureka's `application.properties`. |
+| A stopped instance is still in the dashboard | It was killed without saying goodbye | Wait about 90 s. Stop Meeting and Notification with Ctrl+C: they de-register at once. |
+| `EADDRINUSE` or `address already in use` | Another instance already uses this port | Set `PORT` to another value before starting the 2nd instance. |
+| Only 1 NOTIFICATION although 2 are running | The 2nd one was started with `uvicorn --port 8094` but without `PORT`, so it told Eureka "8084" | Start it with `$env:PORT=8094; python -m app.main`. |
+| `Activate.ps1 cannot be loaded because running scripts is disabled` | PowerShell security policy | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then try again. |
+| npm warnings about `request` (deprecated, vulnerabilities) | eureka-js-client uses this old library | Expected for this workshop. Do not run `npm audit fix --force`. |
+
+---
+
 <div align="center">
 
 # Chapter 4 — Service Discovery and Observability

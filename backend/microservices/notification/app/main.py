@@ -1,15 +1,26 @@
 """Notification microservice - entry point.
 
-Run:  uvicorn app.main:app --reload --port 8084
-  or: python -m app.main
+Run:  python -m app.main                                 (port 8084, or the PORT environment variable)
+  or: python -m uvicorn app.main:app --reload --port 8084
+      (with uvicorn, set PORT to the same value as --port, otherwise Eureka gets a wrong port)
 """
-import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.eureka import PORT, start_eureka, stop_eureka
 from app.routers import notification
+from app.schemas import HealthResponse
 
-PORT = int(os.getenv("PORT", "8084"))
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start-up: register in Eureka
+    await start_eureka()
+    yield
+    # Shutdown (Ctrl+C): de-register from Eureka
+    await stop_eureka()
+
 
 app = FastAPI(
     title="Notification Microservice API",
@@ -24,11 +35,23 @@ app = FastAPI(
     docs_url="/swagger-ui",       # Swagger UI
     openapi_url="/v3/api-docs",   # OpenAPI JSON
     redoc_url="/redoc",           # alternative documentation
+    lifespan=lifespan,            # code run at start-up and at shutdown (Eureka registration)
 )
 
 app.include_router(notification.router)
 
 # TODO (students): if you add other routers, include them here.
+
+
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Eureka"],
+    summary="Health of the instance",
+    description="Bonus Eureka: declared to Eureka as healthCheckUrl and statusPageUrl.",
+)
+def health() -> HealthResponse:
+    return HealthResponse(status="UP")
 
 
 if __name__ == "__main__":

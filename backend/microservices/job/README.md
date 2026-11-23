@@ -25,6 +25,11 @@ mvn spring-boot:run
 
 `spring.jpa.hibernate.ddl-auto=none`: the SQL script owns the schema. Switch to `update` to let Hibernate manage it.
 
+## Eureka (workshop, Chapter 4)
+Registered in Eureka as **JOB** (start the Eureka server on port 8761 first):
+`spring-cloud-starter-netflix-eureka-client` in `pom.xml`, `@EnableDiscoveryClient` in `JobApplication`,
+`eureka.client.*` in `application.properties`. The tests disable Eureka (`eureka.client.enabled=false`).
+
 ## Endpoints
 | Method | Path | Description |
 |---|---|---|

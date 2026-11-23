@@ -16,8 +16,55 @@ module.exports = {
     contact: { name: 'Badia Abouhdid' },
   },
   servers: [{ url: `http://localhost:${PORT}`, description: 'Local' }],
-  tags: [{ name: 'Meetings', description: 'Meeting endpoints' }],
+  tags: [
+    { name: 'Meetings', description: 'Meeting endpoints' },
+    { name: 'Eureka', description: 'Bonus of the Eureka workshop: health and service discovery' },
+  ],
   paths: {
+    '/health': {
+      get: {
+        tags: ['Eureka'],
+        summary: 'Health of the instance',
+        description: 'Declared to Eureka as healthCheckUrl and statusPageUrl.',
+        operationId: 'health',
+        responses: {
+          200: {
+            description: 'The instance is up',
+            content: { 'application/json': { example: { status: 'UP' } } },
+          },
+        },
+      },
+    },
+    '/api/meetings/candidates/{id}': {
+      get: {
+        tags: ['Eureka'],
+        summary: 'Get a candidate from the candidat microservice, found through Eureka',
+        description: 'Asks Eureka for an instance of CANDIDAT (no hard-coded URL), ' +
+          'then calls GET /api/candidates/{id} on it. `servedBy` shows which instance answered.',
+        operationId: 'getCandidate',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, example: 1 }],
+        responses: {
+          200: {
+            description: 'The candidate, and the CANDIDAT instance that answered',
+            content: {
+              'application/json': {
+                example: {
+                  servedBy: 'http://192.168.1.10:8081',
+                  candidate: { id: 1, firstname: 'Badia', lastname: 'Abouhdid', email: 'badia@example.com' },
+                },
+              },
+            },
+          },
+          400: { description: 'Invalid id', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          404: { description: 'Candidate not found (answer of the candidat microservice)' },
+          503: {
+            description: 'No CANDIDAT instance in Eureka, or the instance is not reachable',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+          },
+        },
+      },
+    },
+
     '/api/meetings/hello': {
       get: {
         tags: ['Meetings'],

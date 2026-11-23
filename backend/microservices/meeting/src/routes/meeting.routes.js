@@ -6,6 +6,9 @@ const router = Router();
 // GET /api/meetings/hello
 router.get('/hello', meetingController.hello);
 
+// Bonus (Eureka): GET /api/meetings/candidates/:id -> calls the candidat microservice found through Eureka
+router.get('/candidates/:id', meetingController.getCandidate);
+
 // TODO (students): add the Meeting CRUD routes here, for example:
 // router.get('/', meetingController.findAll);
 // router.get('/:id', meetingController.findById);

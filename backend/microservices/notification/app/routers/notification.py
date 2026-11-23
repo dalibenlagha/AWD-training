@@ -1,7 +1,10 @@
 """Notification routes: /api/notifications/..."""
-from fastapi import APIRouter
+import httpx
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
-from app.schemas import HelloResponse
+from app import eureka
+from app.schemas import CandidateFromEureka, HelloResponse
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 
@@ -14,6 +17,45 @@ router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
 )
 def hello() -> HelloResponse:
     return HelloResponse(message="hello I'm microservice notification")
+
+
+@router.get(
+    "/candidates/{candidate_id}",
+    response_model=CandidateFromEureka,
+    tags=["Eureka"],
+    summary="Get a candidate from the candidat microservice, found through Eureka",
+    description=(
+        "Bonus Eureka: asks Eureka for an instance of CANDIDAT (no hard-coded URL), "
+        "then calls GET /api/candidates/{id} on it. `servedBy` shows which instance answered."
+    ),
+    responses={
+        404: {"description": "Candidate not found (answer of the candidat microservice)"},
+        503: {"description": "No CANDIDAT instance in Eureka, or the instance is not reachable"},
+    },
+)
+async def get_candidate(candidate_id: int):
+    # 1 + 2. Ask Eureka (local copy of the registry) for the address of one CANDIDAT instance
+    base_url = eureka.find_service_url("CANDIDAT")
+    if base_url is None:
+        raise HTTPException(status_code=503, detail="No instance of CANDIDAT is registered in Eureka")
+
+    # 3. Call that instance directly (short timeout: never wait forever for another service)
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(f"{base_url}/api/candidates/{candidate_id}")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=503, detail=f"CANDIDAT instance {base_url} is not reachable")
+
+    if response.status_code != 200:
+        # e.g. 404 sent back by candidat
+        try:
+            body = response.json()
+        except ValueError:
+            body = {"detail": response.text}
+        return JSONResponse(status_code=response.status_code, content=body)
+
+    # servedBy shows which CANDIDAT instance answered (useful with 2 instances: 8081 and 8091)
+    return CandidateFromEureka(servedBy=base_url, candidate=response.json())
 
 
 # TODO (students): implement the Notification logic.

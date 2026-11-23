@@ -11,6 +11,9 @@ app.use(express.json());
 app.get('/v3/api-docs', (req, res) => res.json(openapiSpec));
 app.use('/swagger-ui', swaggerUi.serve, swaggerUi.setup(openapiSpec));
 
+// ---- Health (Bonus Eureka): declared as healthCheckUrl / statusPageUrl in src/config/eureka.js ----
+app.get('/health', (req, res) => res.status(200).json({ status: 'UP' }));
+
 // ---- API routes ----
 app.use('/api/meetings', meetingRoutes);
 

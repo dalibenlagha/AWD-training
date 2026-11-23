@@ -12,6 +12,17 @@ mvn spring-boot:run
 - H2 console: http://localhost:8081/h2 (user `Badia`, empty password; the JDBC URL is printed in the startup log
   because `spring.datasource.url` is commented out. Uncomment it or set `jdbc:h2:mem:candidat` for a fixed URL.)
 
+## Eureka (workshop, Chapter 4)
+Registered in Eureka as **CANDIDAT** (start the Eureka server on port 8761 first):
+`spring-cloud-starter-netflix-eureka-client` in `pom.xml`, `@EnableDiscoveryClient` in `CandidatApplication`,
+`eureka.client.*` in `application.properties`.
+
+2nd instance on port 8091:
+- IntelliJ: *Run → Edit Configurations*, copy `CandidatApplication`, *Modify options → Add VM options*: `-Dserver.port=8091`
+- command line: `mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8091"`
+
+Each instance has its own in-memory H2 database, so the data is not shared between 8081 and 8091.
+
 ## Endpoints
 | Method | Path | Description |
 |---|---|---|
